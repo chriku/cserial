@@ -1,39 +1,61 @@
 #include "serialize.hpp"
 #include "avro.hpp"
 
-template <typename base_type> struct serialize_single_field;
-template <> struct serialize_single_field<int> {
-  static void serialize(int& target, std::string_view name) {
-    /*std::cout << "Serialize int " << name << " with value " << target << std::endl;*/
-    target++;
-  }
-};
+using namespace std::literals;
 
-template <typename class_type> void debug_serializer(class_type* complete_value) {
-  decltype(complete_value->serializer_info)::iterate(complete_value, [&]<typename current_field>(class_type* s, current_field*) {
-    serialize_single_field<typename current_field::value_type>::serialize(s->*current_field::member_pointer(), current_field::name());
-  });
-}
+template <typename base_type> struct serialize_single_field;
 
 struct Z {
   int x;
   int y;
-  serializer<serializable_field<&Z::x, "x">, serializable_field<&Z::y, "y">> serializer_info;
 };
+template <> struct serial<Z> : serializer<serializable_field<&Z::x, "x">, serializable_field<&Z::y, "y">> {};
 struct Y {
   int b;
   int c;
-  int d;
-  std::unordered_map<std::string, int> z;
-  serializer<serializable_field<&Y::b, "b">, serializable_field<&Y::c, "c">, serializable_field<&Y::d, "d">, serializable_field<&Y::z, "z">> serializer_info;
+  Z d;
+  std::vector<int> z;
+  std::unordered_map<std::string, int> y;
+  std::optional<int> x;
+  std::variant<int, int> w;
 };
+template <>
+struct serial<Y> : serializer<serializable_field<&Y::b, "b">, serializable_field<&Y::c, "c">, serializable_field<&Y::d, "d">, serializable_field<&Y::z, "z">,
+                              serializable_field<&Y::y, "y">, serializable_field<&Y::x, "x">, serializable_field<&Y::w, "w">> {};
 
 int main() {
   Y a;
-  a.b = 0;
-  a.c = 0;
-  a.d = 0;
-  a.z["foo"] = 3;
+  a.b = 42;
+  a.c = 38;
+  a.d.x = 7;
+  a.d.y = 8;
+  a.z.push_back(5);
+  a.z.push_back(6);
+  a.z.push_back(7);
+  a.y["a"] = 3;
+  a.y["b"] = 4;
+  a.x = 3;
+  a.w = std::variant<int, int>(std::in_place_index<1>, 8);
   avro::schema<Y>();
-  avro::serialize(a);
+  std::string ser_str = avro::serialize(a);
+  std::cout << "\"";
+  for (uint8_t c : ser_str) {
+    std::cout << "\\x" << std::setfill('0') << std::setw(2) << std::hex << c + 0;
+  }
+  std::cout << "\"s" << std::dec << std::endl;
+  Y b;
+  avro::deserialize(b, ser_str);
+  std::cout << b.b << std::endl;
+  std::cout << b.c << std::endl;
+  std::cout << b.d.x << std::endl;
+  std::cout << b.d.y << std::endl;
+  std::cout << b.z.size() << std::endl;
+  std::cout << b.z.at(0) << std::endl;
+  std::cout << b.z.at(1) << std::endl;
+  std::cout << b.z.at(2) << std::endl;
+  std::cout << b.y.at("a") << std::endl;
+  std::cout << b.y.at("b") << std::endl;
+  std::cout << std::boolalpha << b.x.has_value() << std::endl;
+  std::cout << b.w.index() << std::endl;
+  std::cout << std::get<1>(b.w) << std::endl;
 }

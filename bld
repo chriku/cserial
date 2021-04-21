@@ -1,1 +1,5 @@
-clear;clang-format-12 -i serialize.cpp;clang++-12 -std=c++20 serialize.cpp && ./a.out
+set -e
+clear
+clang-format-12 -i serialize.cpp
+clang++-12 -Wall -o cserial -std=c++20 serialize.cpp
+./cserial

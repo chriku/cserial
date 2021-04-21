@@ -18,6 +18,7 @@ template <size_t N> struct string_literal {
       return std::string_view();
   }
 };
+template <typename base_class> struct serial;
 
 template <auto member_pointer_t, string_literal name_t> struct serializable_field {
   using value_type = typename member_pointer_value<decltype(member_pointer_t)>::type;
