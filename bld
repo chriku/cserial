@@ -1,0 +1,1 @@
+clear;clang-format-12 -i serialize.cpp;clang++-12 -std=c++20 serialize.cpp && ./a.out
