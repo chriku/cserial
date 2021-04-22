@@ -1,0 +1,6 @@
+[submodule "doctest"]
+	path = doctest
+	url = git@github.com:onqtam/doctest.git
+[submodule "bounded-integer"]
+	path = bounded-integer
+	url = https://github.com/davidstone/bounded-integer.git

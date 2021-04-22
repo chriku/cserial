@@ -31,3 +31,5 @@ nie.zip
 version.inc
 nie.elf
 cserial
+*.avro
+test

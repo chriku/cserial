@@ -1,5 +1,6 @@
 set -e
 clear
 clang-format-12 -i serialize.cpp
-clang++-12 -Wall -o cserial -std=c++20 serialize.cpp
-./cserial
+clang++-13 -g -stdlib=libc++ -Ibounded-integer/operators/include/ -Ibounded-integer/include/ -Wall -o cserial -std=c++2b serialize.cpp
+./cserial #> test.avro
+#hexdump -C test.avro
