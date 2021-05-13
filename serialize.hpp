@@ -38,11 +38,25 @@ namespace cserial {
       } else
         return default_value;
     }
-    template <typename chosen_t> constexpr static auto parameter(auto default_value) {
+    template <typename chosen_t, typename argument_type> constexpr static argument_type parameter(argument_type default_value = argument_type()) {
       if constexpr (sizeof...(parameters_t) > 0) {
         return access_field<chosen_t, parameters_t...>(default_value);
       }
       return default_value;
+    }
+    template <typename chosen_t, typename current_parameter, typename... other_parameters> constexpr static bool has_access_field() {
+      if constexpr (std::is_same_v<chosen_t, typename current_parameter::key>) {
+        return true;
+      } else if constexpr (sizeof...(other_parameters) > 0) {
+        return has_access_field<chosen_t, other_parameters...>();
+      } else
+        return false;
+    }
+    template <typename chosen_t> constexpr static auto has_parameter() {
+      if constexpr (sizeof...(parameters_t) > 0) {
+        return has_access_field<chosen_t, parameters_t...>();
+      }
+      return false;
     }
   };
 

@@ -2,6 +2,7 @@
 
 #include "json.hpp"
 #include "serialize.hpp"
+#include "utils.hpp"
 #include <iomanip>
 #include <sstream>
 #include <string_view>
@@ -11,94 +12,6 @@
 
 namespace cserial {
   namespace avro {
-    using namespace std::literals;
-
-    /* calculate absolute value */
-    constexpr int abs_val(int x) { return x < 0 ? -x : x; }
-
-    /* calculate number of digits needed, including minus sign */
-    constexpr int num_digits(int x) { return x < 0 ? 1 + num_digits(-x) : x < 10 ? 1 : 1 + num_digits(x / 10); }
-
-    /* metaprogramming string type: each different string is a unique type */
-    template <char... args> struct metastring {
-      const char data[sizeof...(args) + 1] = {'f', args...};
-    };
-
-    /* recursive number-printing template, general case (for three or more digits) */
-    template <int size, int x, char... args> struct numeric_builder { typedef typename numeric_builder<size - 1, x / 10, '0' + abs_val(x) % 10, args...>::type type; };
-
-    /* special case for two digits; minus sign is handled here */
-    template <int x, char... args> struct numeric_builder<2, x, args...> { typedef metastring < x<0 ? '-' : '0' + x / 10, '0' + abs_val(x) % 10, args...> type; };
-
-    /* special case for one digit (positive numbers only) */
-    template <int x, char... args> struct numeric_builder<1, x, args...> { typedef metastring<'0' + x, args...> type; };
-
-    /* convenience wrapper for numeric_builder */
-    template <int x> class numeric_string {
-    private:
-      /* generate a unique string type representing this number */
-      typedef typename numeric_builder<num_digits(x), x>::type type;
-
-      /* declare a static string of that type (instantiated later at file scope) */
-      static constexpr type value{};
-
-    public:
-      /* returns a pointer to the instantiated string */
-      static constexpr std::string_view get() { return std::string_view(value.data, num_digits(x) + 1); }
-    };
-
-    /* instantiate numeric_string::value as needed for different numbers */
-    template <int x> constexpr typename numeric_string<x>::type numeric_string<x>::value;
-
-    template <class... T> struct always_false : std::false_type {};
-    void zig_zag(std::stringstream& ss, int64_t value) {
-      uint64_t positive;
-      if (value >= 0)
-        positive = value * 2;
-      else
-        positive = (-value * 2) - 1;
-      do {
-        uint8_t b = positive % 0x80;
-        positive >>= 7;
-        if (positive > 0)
-          b |= 0x80;
-        ss << ((char)b);
-      } while (positive > 0);
-    }
-    void avro_string(std::stringstream& ss, std::string value) {
-      zig_zag(ss, value.size());
-      ss << value;
-    }
-    struct string_view_parser {
-      string_view_parser(const std::string_view& data) : m_data(data), m_current_pos(m_data.begin()) {}
-      const std::string_view& m_data;
-      std::string_view::const_iterator m_current_pos;
-      int64_t zig_zag() {
-        int64_t val = 0;
-        uint8_t current_byte;
-        uint8_t off = 0;
-        do {
-          current_byte = *m_current_pos;
-          ++m_current_pos;
-          val |= static_cast<int64_t>(current_byte & 0x7f) << off;
-          off += 7;
-        } while (current_byte & 0x80);
-        if (val % 2) {
-          return -(val + 1) / 2;
-        } else {
-          return val / 2;
-        }
-      }
-      std::string_view fixed(size_t len) {
-        auto start = m_current_pos;
-        m_current_pos += len;
-        return std::string_view(start, m_current_pos - start);
-      }
-      std::string_view string() { return fixed(zig_zag()); }
-    };
-    template <typename T, typename = void> constexpr bool is_defined = false;
-
-    template <typename T> constexpr bool is_defined<T, decltype(typeid(T), void())> = true;
     template <typename self_type> struct serialize_value;
     template <typename self_type> struct serialize_value_norm : serialize_value<std::remove_cv_t<std::remove_reference_t<self_type>>> {};
     template <typename self_type_raw> struct serialize_value {
@@ -134,7 +47,7 @@ namespace cserial {
 
     template <> struct serialize_value<int64_t> {
       static std::string_view name() { return "long"sv; }
-      static nlohmann::json schema() { return nlohmann::json(name()); }
+      static nlohmann::json schema() { return nlohmann::json({{"type", name()}}); }
       static void binary(std::stringstream& ss, const int64_t& value) { zig_zag(ss, value); }
       static void unbinary(string_view_parser& svp, int64_t& value) { value = svp.zig_zag(); }
       static nlohmann::json json(const int64_t& value) { return nlohmann::json(value); }
@@ -347,8 +260,7 @@ namespace cserial {
   } // namespace avro
   template <>
   struct serial<avro::schema_file> : serializer<"ContainerObject", field<&avro::schema_file::magic, "magic">, field<&avro::schema_file::meta, "meta">,
-                                                field<&avro::schema_file::sync, "sync">, field<&avro::schema_file::count, "count">,
-                                                field<&avro::schema_file::size, "size">> {};
+                                                field<&avro::schema_file::sync, "sync">, field<&avro::schema_file::count, "count">, field<&avro::schema_file::size, "size">> {};
   namespace avro {
     template <typename self_type> std::string serialize_object_container(const self_type& a) {
       std::string file_data = serialize(a);
