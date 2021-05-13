@@ -7,7 +7,7 @@
 struct file_content {
   double x;
 };
-template <> struct cserial::serial<file_content> : serializer<"file_content", serializable_field<&file_content::x, "x">> {};
+template <> struct cserial::serial<file_content> : serializer<"file_content", field<&file_content::x, "x">> {};
 
 TEST_CASE("nienary double 0") {
   file_content a;

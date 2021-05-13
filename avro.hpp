@@ -346,9 +346,9 @@ namespace cserial {
     };
   } // namespace avro
   template <>
-  struct serial<avro::schema_file> : serializer<"ContainerObject", serializable_field<&avro::schema_file::magic, "magic">, serializable_field<&avro::schema_file::meta, "meta">,
-                                                serializable_field<&avro::schema_file::sync, "sync">, serializable_field<&avro::schema_file::count, "count">,
-                                                serializable_field<&avro::schema_file::size, "size">> {};
+  struct serial<avro::schema_file> : serializer<"ContainerObject", field<&avro::schema_file::magic, "magic">, field<&avro::schema_file::meta, "meta">,
+                                                field<&avro::schema_file::sync, "sync">, field<&avro::schema_file::count, "count">,
+                                                field<&avro::schema_file::size, "size">> {};
   namespace avro {
     template <typename self_type> std::string serialize_object_container(const self_type& a) {
       std::string file_data = serialize(a);
