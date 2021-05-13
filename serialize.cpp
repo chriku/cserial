@@ -12,7 +12,7 @@ template <> struct cserial::serial<val_t> : serializer<"file_content", field<&va
 
 struct file_content {
   val_t z;
-  int64_t x = 0x100;
+  int32_t x = 0x100;
 };
 template <> struct cserial::serial<file_content> : serializer<"file_content", field<&file_content::z, "z">, field<&file_content::x, "x">> {};
 struct file_content2 {

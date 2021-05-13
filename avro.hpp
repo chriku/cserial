@@ -47,7 +47,7 @@ namespace cserial {
 
     template <> struct serialize_value<int64_t> {
       static std::string_view name() { return "long"sv; }
-      static nlohmann::json schema() { return nlohmann::json({{"type", name()}}); }
+      static nlohmann::json schema() { return name(); }
       static void binary(std::stringstream& ss, const int64_t& value) { zig_zag(ss, value); }
       static void unbinary(string_view_parser& svp, int64_t& value) { value = svp.zig_zag(); }
       static nlohmann::json json(const int64_t& value) { return nlohmann::json(value); }

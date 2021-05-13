@@ -20,9 +20,16 @@ namespace cserial {
       }
     };
     template <typename variable_type> void chomp_values(std::vector<std::function<void(variable_type&, string_view_parser&)>>& functions, nlohmann::json schema) {
-      if (schema.at("type").get<std::string>() == "long") {
+      std::string type;
+      if (schema.is_object() && schema["type"].is_string())
+        type = schema.at("type").get<std::string>();
+      else if (schema.is_string())
+        type = schema.get<std::string>();
+      else
+        throw std::invalid_argument("Cannot chomp "s + schema.dump());
+      if (type == "long") {
         functions.push_back([](variable_type& v, string_view_parser& p) { p.zig_zag(); });
-      } else if (schema.at("type").get<std::string>() == "record") {
+      } else if (type == "record") {
         for (const auto& f : schema.at("fields"))
           chomp_values<variable_type>(functions, f.at("type"));
       } else
@@ -30,8 +37,6 @@ namespace cserial {
     }
     template <typename variable_type> struct build_deserializer_stream {
       static std::function<void(variable_type&, string_view_parser&)> build(nlohmann::json schema) {
-        std::cout << schema << std::endl;
-        std::cout << avro::schema<variable_type>() << std::endl;
         if (schema.at("type").get<std::string>() != "record"s)
           throw std::invalid_argument("Cannot parse record into non-record");
         if (schema.at("name").get<std::string>() != serial<variable_type>::name())
@@ -55,7 +60,14 @@ namespace cserial {
             }
           });
           if (drop_value) {
-            chomp_values<variable_type>(functions, field.at("type"));
+            nlohmann::json type;
+            if (field.is_object() && field["type"].is_object())
+              type = field.at("type");
+            else if (field.is_object() && field["type"].is_string())
+              type = nlohmann::json({{"type", field.at("type")}});
+            else
+              throw std::invalid_argument("Cannot chomp "s + field.dump());
+            chomp_values<variable_type>(functions, type);
           }
         }
         for (const auto& [key_name, f] : missing) {
