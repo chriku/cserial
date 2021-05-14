@@ -8,7 +8,7 @@ using namespace std::literals;
 struct val_t {
   int64_t f;
 };
-template <> struct cserial::serial<val_t> : serializer<"file_content", field<&val_t::f, "f", parameter<cserial::default_value, 5>>> {};
+template <> struct cserial::serial<val_t> : serializer<"val_t", field<&val_t::f, "f", parameter<cserial::default_value, 5>>> {};
 
 struct file_content {
   val_t z;
