@@ -1,4 +1,4 @@
-# C++17 template based serialization/deserialization library
+# C++20 template based serialization/deserialization library
 
 ## Usage:
 
