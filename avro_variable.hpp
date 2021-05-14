@@ -81,6 +81,11 @@ namespace cserial {
       }
     };
 #endif
+    /**
+     * \brief build a deserializer for a given schema parsing into variable_type
+     * \param[in] schema Apache Avro schema
+     * \return deserializer
+     */
     template <typename variable_type> std::function<void(variable_type&, const std::string_view&)> build_deserializer(nlohmann::json schema) {
       auto lambda = build_deserializer_stream<variable_type>::build(schema);
       return [lambda](variable_type& target, const std::string_view& view) {
