@@ -1,6 +1,6 @@
 set -e
 clear
-clang-format-12 -i serialize.cpp
+clang-format-12 -i develop.cpp
 clang++-13 -g -stdlib=libc++ -Wall -o cserial -std=c++20 develop.cpp
 ./cserial #> test.avro
 #hexdump -C test.avro
