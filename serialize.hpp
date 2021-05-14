@@ -5,15 +5,11 @@
 #include <string_view>
 
 namespace cserial {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
   template <typename T> struct member_pointer_class;
   template <typename Class, typename Value> struct member_pointer_class<Value Class::*> { typedef Class type; };
   template <typename T> struct member_pointer_value;
   template <typename Class, typename Value> struct member_pointer_value<Value Class::*> { typedef Value type; };
-
-  template <typename key_t, auto val_t> struct parameter {
-    using key = key_t;
-    constexpr static auto value = val_t;
-  };
   template <size_t N> struct string_literal {
     constexpr string_literal(const char (&str)[N]) { std::copy_n(str, N, value); }
     char value[N];
@@ -24,9 +20,29 @@ namespace cserial {
         return std::string_view();
     }
   };
+#endif
+  /**
+   * \brief A parameter for a field
+   */
+  template <typename key_t, auto val_t> struct parameter {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    using key = key_t;
+    constexpr static auto value = val_t;
+#endif
+  };
+  /**
+   * \brief Describes the layout of a serializable struct
+   */
   template <typename base_class> struct serial;
 
+  /**
+   * \brief Descripe a field inside a serializationd definition
+   * \tparam member_pointer_t Pointer to the member of the class where data should be loaded/stored
+   * \tparam name_t Name of the field in the struct
+   * \tparam parameters_t list of 0..n parameters
+   */
   template <auto member_pointer_t, string_literal name_t, typename... parameters_t> struct field {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     using value_type = typename member_pointer_value<decltype(member_pointer_t)>::type;
     constexpr static inline auto member_pointer() { return member_pointer_t; }
     constexpr static inline std::string_view name() { return name_t(); }
@@ -58,8 +74,10 @@ namespace cserial {
       }
       return false;
     }
+#endif
   };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
   template <typename self_type, typename executor_type, typename current_field, typename... other> struct field_iterator {
     static inline void execute(self_type* s, executor_type executor) {
       executor(s, static_cast<current_field*>(nullptr));
@@ -68,13 +86,24 @@ namespace cserial {
       }
     }
   };
-
+#endif
+  /**
+   * \brief Default builder for simple structs
+   * \tparam name_t Name of the struct to be used in serialization
+   * \tparam args List of fields
+   */
   template <string_literal name_t, typename... args> struct serializer {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     template <typename self_type, typename executor_type> static inline void iterate(self_type* s, executor_type executor) {
       field_iterator<self_type, executor_type, args...>::execute(s, executor);
     }
     static inline std::string_view name() { return name_t(); }
+#endif
   };
 
+  /**
+   * \brief Default key for the default_value parameter.
+   * Should be used to fill fields, when they are missing from the schema.
+   */
   struct default_value {};
 } // namespace cserial

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "avro.hpp"
-#include "json.hpp"
 #include "serialize.hpp"
 #include "utils.hpp"
 #include <iomanip>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <string_view>
 #include <unordered_map>
@@ -13,6 +13,7 @@
 
 namespace cserial {
   namespace avro_variable {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     template <typename variable_type> struct build_deserializer_stream;
     template <> struct build_deserializer_stream<int64_t> {
       static std::function<void(int64_t&, string_view_parser&)> build(nlohmann::json schema) {
@@ -79,6 +80,7 @@ namespace cserial {
         };
       }
     };
+#endif
     template <typename variable_type> std::function<void(variable_type&, const std::string_view&)> build_deserializer(nlohmann::json schema) {
       auto lambda = build_deserializer_stream<variable_type>::build(schema);
       return [lambda](variable_type& target, const std::string_view& view) {

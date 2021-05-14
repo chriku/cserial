@@ -1,6 +1,6 @@
 set -e
 clear
 clang-format-12 -i develop.cpp
-clang++-13 -g -fno-rtti -c -O3 -stdlib=libc++ -Wall -o cserial -std=c++20 develop.cpp
+clang++-13 -g -fno-rtti -c -O3 -Ijson/include/ -stdlib=libc++ -Wall -o cserial -std=c++20 develop.cpp
 #./cserial #> test.avro
 #hexdump -C test.avro
