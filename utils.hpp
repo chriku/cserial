@@ -23,12 +23,12 @@ namespace cserial {
     static constexpr type value{};
 
   public:
-    static constexpr std::string_view get() { return std::string_view(value.data, num_digits(x) + 1); }
+    static constexpr inline std::string_view get() { return std::string_view(value.data, num_digits(x) + 1); }
   };
   template <int x> constexpr typename numeric_string<x>::type numeric_string<x>::value;
 
   template <class... T> struct always_false : std::false_type {};
-  void zig_zag(std::stringstream& ss, int64_t value) {
+  inline void zig_zag(auto& ss, int64_t value) {
     uint64_t positive;
     if (value >= 0)
       positive = value * 2;
@@ -39,18 +39,19 @@ namespace cserial {
       positive >>= 7;
       if (positive > 0)
         b |= 0x80;
-      ss << ((char)b);
+      char w = b;
+      ss(std::string_view(&w, 1));
     } while (positive > 0);
   }
-  void avro_string(std::stringstream& ss, std::string value) {
+  inline void avro_string(auto& ss, std::string value) {
     zig_zag(ss, value.size());
-    ss << value;
+    ss(value);
   }
   struct string_view_parser {
     string_view_parser(const std::string_view& data) : m_data(data), m_current_pos(m_data.begin()) {}
     const std::string_view& m_data;
     std::string_view::const_iterator m_current_pos;
-    int64_t zig_zag() {
+    inline int64_t zig_zag() {
       int64_t val = 0;
       uint8_t current_byte;
       uint8_t off = 0;
@@ -66,13 +67,17 @@ namespace cserial {
         return val / 2;
       }
     }
-    std::string_view fixed(size_t len) {
+    inline std::string_view fixed(size_t len) {
       auto start = m_current_pos;
       m_current_pos += len;
       return std::string_view(start, m_current_pos - start);
     }
-    std::string_view string() { return fixed(zig_zag()); }
+    inline std::string_view string() { return fixed(zig_zag()); }
   };
+#if defined(RTTI_ENABLED)
   template <typename T, typename = void> constexpr bool is_defined = false;
   template <typename T> constexpr bool is_defined<T, decltype(typeid(T), void())> = true;
+#else
+  template <typename T> constexpr bool is_defined = true;
+#endif
 } // namespace cserial

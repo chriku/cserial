@@ -14,7 +14,7 @@ struct cserial::serial<val_t> : serializer<"val_t", //
 
 struct file_content {
   val_t z;
-  int32_t x = 0x100;
+  int64_t x = 0x100;
 };
 template <>
 struct cserial::serial<file_content> : serializer<"file_content",               //
