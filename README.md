@@ -25,13 +25,15 @@ struct cserial::serial<serial_struct_t> : serializer<"serial_struct_t",         
                                                      field<&serial_struct_t::x, "integer_field">> {};
 ```
 
-For each serializable structure needs a specialization of `cserial::serial` to be serialized.
+For each custom serializable structure a specialization of `cserial::serial` is needed to be serialized.
 
 The default `cserial::serializer` takes the name for the schema as the first template parameter and a list of `field`s as parameter pack.
 
-Each field takes a member-pointer to the field as the first argument, the name of the field in the schema as second and a parameter pack of `parameter` containing miseleanneous options for each field.
+Each field takes a member-pointer to the field as the first argument, the name of the field in the schema as second and a parameter pack of `parameter` containing miscellaneous options for each field.
 
 ### Apache Avro serializer
+
+Currently supported types are simple structs using `cserial::serial` and `int64_t`. For the fixed avro (de)serializer are `double`, `float`, `std::string`, `std::vector<T>`, `std::unordered_map<std::string, T>`, `std::optional<T>`, `std::variant<T...>` and `std::array<char, len>` are also supported.
 
 #### Schema
 
@@ -69,7 +71,7 @@ To get the schema as json object, use `cserial::avro::schema<serial_struct_t>()`
 
 #### Serialization
 
-At the current time only fixed serialization to thze generated schema is supported.
+At the current time only fixed serialization to the generated schema for thsi exact is supported.
 To use this, `std::string cserial::avro::serialize(auto)` returns the serialized string of the given object.
 
 #### Fixed Desertialzation
