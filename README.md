@@ -35,7 +35,7 @@ Each field takes a member-pointer to the field as the first argument, the name o
 
 #### Schema
 
-To get the schema as juson object, use `cserial::avro::schema<serial_struct_t>()`. For this example this results in
+To get the schema as json object, use `cserial::avro::schema<serial_struct_t>()`. For this example this results in
 
 ```Json
 {
