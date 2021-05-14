@@ -41,6 +41,8 @@ To get the schema as json object, use `cserial::avro::schema<serial_struct_t>()`
 
 ```Json
 {
+  "name": "serial_struct_t",
+  "type": "record",
   "fields": [
     {
       "name": "child",
@@ -63,9 +65,7 @@ To get the schema as json object, use `cserial::avro::schema<serial_struct_t>()`
       "name": "integer_field",
       "type": "long"
     }
-  ],
-  "name": "serial_struct_t",
-  "type": "record"
+  ]
 }
 ```
 
