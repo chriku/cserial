@@ -18,41 +18,62 @@ namespace cserial {
     template <typename variable_type> void chomp_values(std::vector<std::function<void(variable_type&, string_view_parser&)>>& functions, nlohmann::json schema);
     template <> struct build_deserializer_stream<int64_t> {
       static std::function<void(int64_t&, string_view_parser&)> build(nlohmann::json schema) {
+        if ((schema.get<std::string>() != "long") && (schema.get<std::string>() != "int"))
+          throw std::runtime_error("Attempt to read number from " + schema.dump());
         return [](int64_t& target, string_view_parser& parser) { target = parser.zig_zag(); };
       }
     };
     template <> struct build_deserializer_stream<int32_t> {
       static std::function<void(int32_t&, string_view_parser&)> build(nlohmann::json schema) {
+        if ((schema.get<std::string>() != "long") && (schema.get<std::string>() != "int"))
+          throw std::runtime_error("Attempt to read number from " + schema.dump());
         return [](int32_t& target, string_view_parser& parser) { target = parser.zig_zag(); };
       }
     };
     template <> struct build_deserializer_stream<bool> {
       static std::function<void(bool&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema.get<std::string>() != "boolean")
+          throw std::runtime_error("Attempt to read bool from " + schema.dump());
         return [](bool& target, string_view_parser& parser) { target = parser.fixed(1).at(0) != 0; };
       }
     };
     template <> struct build_deserializer_stream<float> {
       static std::function<void(float&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema.get<std::string>() != "float")
+          throw std::runtime_error("Attempt to read float from " + schema.dump());
         return [](float& target, string_view_parser& parser) { target = *reinterpret_cast<const float*>(parser.fixed(sizeof(float)).data()); };
       }
     };
     template <> struct build_deserializer_stream<double> {
       static std::function<void(double&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema.get<std::string>() != "double")
+          throw std::runtime_error("Attempt to read double from " + schema.dump());
         return [](double& target, string_view_parser& parser) { target = *reinterpret_cast<const double*>(parser.fixed(sizeof(double)).data()); };
       }
     };
     template <> struct build_deserializer_stream<std::string> {
       static std::function<void(std::string&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema.get<std::string>() != "string")
+          throw std::runtime_error("Attempt to read string from " + schema.dump());
         return [](std::string& target, string_view_parser& parser) { target = parser.string(); };
       }
     };
     template <size_t len> struct build_deserializer_stream<std::array<char, len>> {
       static std::function<void(std::array<char, len>&, string_view_parser&)> build(nlohmann::json schema) {
-        return [](std::array<char, len>& target, string_view_parser& parser) { target = parser.fixed(len); };
+        if (schema["type"].get<std::string>() != "fixed")
+          throw std::runtime_error("Attempt to read fixed from " + schema.dump());
+        if (schema["size"].get<size_t>() != len)
+          throw std::runtime_error("Attempt to read fixed from " + schema.dump());
+        return [](std::array<char, len>& value, string_view_parser& parser) {
+          auto data = parser.fixed(len);
+          std::copy(data.begin(), data.end(), value.begin());
+        };
       }
     };
     template <typename subtype> struct build_deserializer_stream<std::vector<subtype>> {
       static std::function<void(std::vector<subtype>&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema["type"].get<std::string>() != "array")
+          throw std::runtime_error("Attempt to read fixed from " + schema.dump());
         auto f = build_deserializer_stream<subtype>::build(schema.at("items"));
         return [f](std::vector<subtype>& target, string_view_parser& parser) {
           target.clear();
@@ -69,6 +90,8 @@ namespace cserial {
     };
     template <typename subtype> struct build_deserializer_stream<std::unordered_map<std::string, subtype>> {
       static std::function<void(std::unordered_map<std::string, subtype>&, string_view_parser&)> build(nlohmann::json schema) {
+        if (schema["type"].get<std::string>() != "map")
+          throw std::runtime_error("Attempt to read fixed from " + schema.dump());
         auto f = build_deserializer_stream<subtype>::build(schema.at("values"));
         return [f](std::unordered_map<std::string, subtype>& target, string_view_parser& parser) {
           target.clear();
@@ -86,6 +109,12 @@ namespace cserial {
     };
     template <typename subtype> struct build_deserializer_stream<std::optional<subtype>> {
       static std::function<void(std::optional<subtype>&, string_view_parser&)> build(nlohmann::json schema) {
+        if (!schema.is_array())
+          throw std::runtime_error("Attempt to read optional from " + schema.dump());
+        if (schema[0].get<std::string>() != "null")
+          throw std::runtime_error("Attempt to read optional from " + schema.dump());
+        if (schema.size() != 2)
+          throw std::runtime_error("Attempt to read optional from " + schema.dump());
         auto f = build_deserializer_stream<subtype>::build(schema[1]);
         return [f](std::optional<subtype>& target, string_view_parser& parser) {
           target.reset();
@@ -115,6 +144,8 @@ namespace cserial {
         }
       }
       static std::function<void(std::variant<subtype...>&, string_view_parser&)> build(nlohmann::json schema) {
+        if (!schema.is_array())
+          throw std::runtime_error("Attempt to read optional from " + schema.dump());
         std::unordered_map<std::string, std::function<std::function<void(std::variant<subtype...>&, string_view_parser&)>(nlohmann::json)>> type_map;
         fill<0, subtype...>(type_map);
         std::vector<std::function<void(std::variant<subtype...>&, string_view_parser&)>> iaf;
@@ -166,6 +197,9 @@ namespace cserial {
         functions.push_back([](variable_type& v, string_view_parser& p) { p.fixed(8); });
       } else if (type == "float") {
         functions.push_back([](variable_type& v, string_view_parser& p) { p.fixed(4); });
+      } else if (type == "fixed") {
+        size_t size = schema.at("size").get<size_t>();
+        functions.push_back([size](variable_type& v, string_view_parser& p) { p.fixed(size); });
       } else if (type == "record") {
         for (const auto& f : schema.at("fields"))
           chomp_values<variable_type>(functions, f.at("type"));
@@ -187,8 +221,8 @@ namespace cserial {
         functions.push_back([iaf](variable_type& vt, string_view_parser& parser) {
           int64_t count = 0;
           while ((count = parser.zig_zag()) > 0) {
-            parser.string();
             for (size_t i = 0; i < count; i++) {
+              parser.string();
               for (const auto& f : iaf)
                 f(vt, parser);
             }
