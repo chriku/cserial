@@ -49,6 +49,19 @@ namespace cserial {
       }
       static inline void unjson(nlohmann::json object, self_type& value) {}
     };
+    template <> struct serialize_value<bool> {
+      static inline constexpr std::string_view name() { return "boolean"sv; }
+      static inline nlohmann::json schema() { return name(); }
+      static inline constexpr void binary(auto& ss, const bool& value) {
+        if (value)
+          ss("\1"sv);
+        else
+          ss("\0"sv);
+      }
+      static inline constexpr void unbinary(auto& svp, bool& value) { value = svp.fixed(1).at(0) != 0; }
+      static inline nlohmann::json json(const bool& value) { return nlohmann::json(value); }
+      static inline void unjson(nlohmann::json object, bool& value) { value = object.get<bool>(); }
+    };
     template <typename integer_type> struct serialize_value_int {
       static inline constexpr std::string_view name() { return "long"sv; }
       static inline nlohmann::json schema() { return name(); }

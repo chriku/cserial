@@ -98,6 +98,19 @@ namespace cserial {
     inline std::string_view string() { return fixed(zig_zag()); }
   };
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
+#if defined(__clang__)
+#if __has_feature(cxx_rtti)
+#define RTTI_ENABLED
+#endif
+#elif defined(__GNUG__)
+#if defined(__GXX_RTTI)
+#define RTTI_ENABLED
+#endif
+#elif defined(_MSC_VER)
+#if defined(_CPPRTTI)
+#define RTTI_ENABLED
+#endif
+#endif
 #if defined(RTTI_ENABLED)
   template <typename T, typename = void> constexpr bool is_defined = false;
   template <typename T> constexpr bool is_defined<T, decltype(typeid(T), void())> = true;
