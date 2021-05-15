@@ -33,7 +33,7 @@ Each field takes a member-pointer to the field as the first argument, the name o
 
 ### Apache Avro serializer
 
-Currently supported types are simple structs using `cserial::serial` and `int64_t`. For the fixed avro (de)serializer are `double`, `float`, `std::string`, `std::vector<T>`, `std::unordered_map<std::string, T>`, `std::optional<T>`, `std::variant<T...>` and `std::array<char, len>` are also supported.
+Currently supported types are simple structs using `cserial::serial`, `int64_t`, `double`, `float`, `std::string`, `std::vector<T>`, `std::unordered_map<std::string, T>`, `std::optional<T>`, `std::variant<T...>` and `std::array<char, len>` are also supported.
 
 #### Schema
 
