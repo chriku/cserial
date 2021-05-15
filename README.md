@@ -74,7 +74,7 @@ To get the schema as json object, use `cserial::avro::schema<serial_struct_t>()`
 At the current time only fixed serialization to the generated schema for thsi exact is supported.
 To use this, `std::string cserial::avro::serialize(auto)` returns the serialized string of the given object.
 
-#### Fixed Desertialzation
+#### Fixed Deserialization
 
 To deserialize into the generated schema use `void deserialize(àuto& value, const std::string_view&)` to deserialize a `string_view` back into a struct.
 
