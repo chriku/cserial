@@ -6,21 +6,23 @@
 using namespace std::literals;
 
 struct file_content {
-  std::unordered_map<std::string, int32_t> x;
-  std::unordered_map<std::string, int32_t> y;
+  int32_t x;
+  int32_t y;
+  // std::unordered_map<std::string, int32_t> y;
 };
 template <>
 struct cserial::serial<file_content> : serializer<"file_content",               //
                                                   field<&file_content::x, "x">, //
                                                   field<&file_content::y, "y">> {};
-struct file_content2 {
+/*struct file_content2 {
   std::unordered_map<std::string, int32_t> y;
 };
 template <>
 struct cserial::serial<file_content2> : serializer<"file_content", //
-                                                   field<&file_content2::y, "y">> {};
+                                                   field<&file_content2::y, "y">> {};*/
 
-int main() {
+void w(void (*o)(std::string_view), file_content& a) { cserial::avro::serialize(a, o); }
+/*int main() {
   file_content a;
   file_content2 b;
   a.y.emplace("A", 4);
@@ -33,4 +35,4 @@ int main() {
   std::cout << cserial::avro::schema<file_content>() << std::endl;
   cserial::avro_variable::build_deserializer<file_content2>(cserial::avro::schema<file_content>())(b, t);
   std::cout << b.y.size() << std::endl;
-}
+}*/
