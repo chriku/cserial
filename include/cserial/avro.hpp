@@ -2,15 +2,16 @@
 
 #include "serialize.hpp"
 #include "utils.hpp"
+#include <chrono>
 #include <iomanip>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <sstream>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include <vector>
-#include <optional>
-#include <chrono>
 
 namespace cserial {
   namespace avro {
@@ -21,11 +22,14 @@ namespace cserial {
       using self_type = typename std::remove_cv_t<std::remove_reference_t<self_type_raw>>;
       static_assert(is_defined<serial<self_type>>, "Missing serializer info");
       static inline constexpr std::string_view name() { return serial<self_type>::name(); }
-      static inline nlohmann::json schema() {
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
+        if (stack.contains(name()))
+          return nlohmann::json(name());
+        stack.insert(name());
         nlohmann::json fields = nlohmann::json::array();
         serial<self_type>::iterate(
             static_cast<self_type*>(nullptr), [&]<typename current_field>(self_type*, current_field*) constexpr {
-              fields.push_back(nlohmann::json{{"name", current_field::name()}, {"type", serialize_value_norm<typename current_field::value_type>::schema()}});
+              fields.push_back(nlohmann::json{{"name", current_field::name()}, {"type", serialize_value_norm<typename current_field::value_type>::schema(stack)}});
             });
         return nlohmann::json{{"type", "record"}, {"name", name()}, {"fields", fields}};
       }
@@ -53,7 +57,7 @@ namespace cserial {
     };
     template <> struct serialize_value<bool> {
       static inline constexpr std::string_view name() { return "boolean"sv; }
-      static inline nlohmann::json schema() { return name(); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return name(); }
       static inline constexpr void binary(auto& ss, const bool& value) {
         if (value)
           ss("\1"sv);
@@ -66,7 +70,7 @@ namespace cserial {
     };
     template <typename integer_type> struct serialize_value_int {
       static inline constexpr std::string_view name() { return "long"sv; }
-      static inline nlohmann::json schema() { return name(); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return name(); }
       static inline constexpr void binary(auto& ss, const integer_type& value) { zig_zag(ss, value); }
       static inline constexpr void unbinary(auto& svp, integer_type& value) { value = svp.zig_zag(); }
       static inline nlohmann::json json(const integer_type& value) { return nlohmann::json(value); }
@@ -82,7 +86,7 @@ namespace cserial {
     template <> struct serialize_value<uint8_t> : serialize_value_int<uint8_t> {};
     template <typename clock, typename duration> struct serialize_value<std::chrono::time_point<clock, duration>> {
       static inline constexpr std::string_view name() { return serialize_value<duration>::name(); }
-      static inline nlohmann::json schema() { return serialize_value<duration>::schema(); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) { return serialize_value<duration>::schema(stack); }
       static inline constexpr void binary(auto& ss, const std::chrono::time_point<clock, duration>& value) {
         duration d = value.time_since_epoch();
         serialize_value<duration>::binary(ss, d);
@@ -95,7 +99,7 @@ namespace cserial {
     };
     template <class Rep, class Period> struct serialize_value<std::chrono::duration<Rep, Period>> {
       static inline constexpr std::string_view name() { return serialize_value<Rep>::name(); }
-      static inline nlohmann::json schema() { return serialize_value<Rep>::schema(); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) { return serialize_value<Rep>::schema(stack); }
       static inline constexpr void binary(auto& ss, const std::chrono::duration<Rep, Period>& value) {
         Rep d = value.count();
         serialize_value<Rep>::binary(ss, d);
@@ -115,16 +119,16 @@ namespace cserial {
     template <> struct serialize_value<double> : serialize_value_float<double> {
       static_assert(sizeof(double) == 8);
       static inline constexpr std::string_view name() { return "double"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json(name()); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json(name()); }
     };
     template <> struct serialize_value<float> : serialize_value_float<float> {
       static_assert(sizeof(float) == 4);
       static inline constexpr std::string_view name() { return "float"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json(name()); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json(name()); }
     };
     template <> struct serialize_value<std::string> {
       static inline constexpr std::string_view name() { return "string"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json(name()); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json(name()); }
       static inline constexpr void binary(auto& ss, const std::string& value) { avro_string(ss, value); }
       static inline constexpr void unbinary(auto& svp, std::string& value) { value = svp.string(); }
       static inline nlohmann::json json(const std::string& value) { return nlohmann::json(value); }
@@ -132,13 +136,15 @@ namespace cserial {
     };
     template <> struct serialize_value<std::monostate> {
       static inline constexpr std::string_view name() { return "null"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json(name()); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json(name()); }
       static inline constexpr void binary(auto& ss, const std::monostate& value) {}
       static inline constexpr void unbinary(auto& svp, std::monostate& value) {}
     };
     template <typename subtype> struct serialize_value<std::vector<subtype>> {
       static inline constexpr std::string_view name() { return "array"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json{{"type", "array"}, {"items", serialize_value_norm<subtype>::schema()}}; }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
+        return nlohmann::json{{"type", "array"}, {"items", serialize_value_norm<subtype>::schema(stack)}};
+      }
       static inline constexpr void binary(auto& ss, const std::vector<subtype>& value) {
         zig_zag(ss, value.size());
         for (const auto& element : value)
@@ -179,7 +185,9 @@ namespace cserial {
 
     template <typename subtype> struct serialize_value<std::unordered_map<std::string, subtype>> {
       static inline constexpr std::string_view name() { return "map"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json{{"type", "map"}, {"values", serialize_value_norm<subtype>::schema()}}; }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
+        return nlohmann::json{{"type", "map"}, {"values", serialize_value_norm<subtype>::schema(stack)}};
+      }
       static inline constexpr void binary(auto& ss, const std::unordered_map<std::string, subtype>& value) {
         zig_zag(ss, value.size());
         for (const auto& [key, value] : value) {
@@ -219,7 +227,7 @@ namespace cserial {
 
     template <typename subtype> struct serialize_value<std::optional<subtype>> {
       static inline constexpr std::string_view name() { return "union"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json{"null", serialize_value_norm<subtype>::schema()}; }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) { return nlohmann::json{"null", serialize_value_norm<subtype>::schema(stack)}; }
       static inline constexpr void binary(auto& ss, const std::optional<subtype>& value) {
         if (value) {
           zig_zag(ss, 1);
@@ -251,7 +259,7 @@ namespace cserial {
 
     template <typename... subtype> struct serialize_value<std::variant<subtype...>> {
       static inline constexpr std::string_view name() { return "union"sv; }
-      static inline nlohmann::json schema() { return nlohmann::json{serialize_value_norm<subtype>::schema()...}; }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) { return nlohmann::json{serialize_value_norm<subtype>::schema(stack)...}; }
       static inline constexpr void binary(auto& ss, const std::variant<subtype...>& value) {
         zig_zag(ss, value.index());
         std::visit(
@@ -282,7 +290,7 @@ namespace cserial {
 
     template <size_t len> struct serialize_value<std::array<char, len>> {
       static inline constexpr std::string_view name() { return numeric_string<len>::get(); }
-      static inline nlohmann::json schema() { return nlohmann::json{{"type", "fixed"}, {"size", len}, {"name", name()}}; }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json{{"type", "fixed"}, {"size", len}, {"name", name()}}; }
       static inline constexpr void binary(auto& ss, const std::array<char, len>& value) { ss(std::string_view(value.begin(), len)); }
       static inline constexpr void unbinary(auto& svp, std::array<char, len>& value) {
         auto data = svp.fixed(len);
@@ -300,7 +308,8 @@ namespace cserial {
      */
     template <typename self_type> inline nlohmann::json schema() {
       static_assert(is_defined<serial<self_type>>, "Missing serializer info");
-      return serialize_value_norm<self_type>::schema();
+      std::unordered_set<std::string_view> stack;
+      return serialize_value_norm<self_type>::schema(stack);
     }
     /**
      * \brief Serialize a value into a std::string
@@ -318,7 +327,7 @@ namespace cserial {
     /**
      * \brief Deserialize a std::string_view
      */
-    template <typename self_type> inline void deserialize(self_type& value, const std::string_view& text) {
+    template <typename self_type> inline void deserialize_sv(self_type& value, const std::string_view& text) {
       string_view_parser p(text);
       serialize_value_norm<self_type>::unbinary(p, value);
     }

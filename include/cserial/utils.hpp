@@ -52,7 +52,7 @@ namespace cserial {
    * \brief Default deserializer reading a std::string_view
    */
   class string_view_parser {
-    const std::string_view& m_data;
+    const std::string_view m_data;
     std::string_view::const_iterator m_current_pos;
 
   public:
@@ -60,7 +60,7 @@ namespace cserial {
      * \brief Construct a string_view_parser from a std::string_view
      * \param[in] data The string_view to operate on. Has to remain valid during the whole existence of the parser.
      */
-    string_view_parser(const std::string_view& data) : m_data(data), m_current_pos(m_data.begin()) {}
+    string_view_parser(std::string_view data) : m_data(data), m_current_pos(m_data.begin()) {}
     /**
      * \brief Read an unsigned integer from the stream
      * \return integer, normalized into 64 bit signed
@@ -96,6 +96,7 @@ namespace cserial {
      * \return part of the string_view. Is only valid as long as the underlaying string_view has valid data
      */
     inline std::string_view string() { return fixed(zig_zag()); }
+    inline size_t left() const { return m_data.end() - m_current_pos; }
   };
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 #if defined(__clang__)
