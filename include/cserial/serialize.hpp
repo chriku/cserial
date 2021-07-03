@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <string_view>
+#include <utility>
 
 namespace cserial {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -95,11 +96,13 @@ namespace cserial {
   template <string_literal name_t, typename... args> struct serializer {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     template <typename self_type, typename executor_type> static inline void iterate(self_type* s, executor_type executor) {
-      field_iterator<self_type, executor_type, args...>::execute(s, executor);
+      if constexpr (sizeof...(args) > 0)
+        field_iterator<self_type, executor_type, args...>::execute(s, executor);
     }
     static inline std::string_view name() { return name_t(); }
 #endif
   };
+  template <class T1, class T2> struct serial<std::pair<T1, T2>> : serializer<"pair", field<&std::pair<T1, T2>::first, "first">, field<&std::pair<T1, T2>::second, "second">> {};
 
   /**
    * \brief Default key for the default_value parameter.

@@ -78,6 +78,32 @@ namespace cserial {
     template <> struct serialize_value<uint16_t> : serialize_value_int<uint16_t> {};
     template <> struct serialize_value<int8_t> : serialize_value_int<int8_t> {};
     template <> struct serialize_value<uint8_t> : serialize_value_int<uint8_t> {};
+    template <typename clock, typename duration> struct serialize_value<std::chrono::time_point<clock, duration>> {
+      static inline constexpr std::string_view name() { return serialize_value<duration>::name(); }
+      static inline nlohmann::json schema() { return serialize_value<duration>::schema(); }
+      static inline constexpr void binary(auto& ss, const std::chrono::time_point<clock, duration>& value) {
+        duration d = value.time_since_epoch();
+        serialize_value<duration>::binary(ss, d);
+      }
+      static inline constexpr void unbinary(auto& svp, std::chrono::time_point<clock, duration>& value) {
+        duration d;
+        serialize_value<duration>::unbinary(svp, d);
+        value = std::chrono::time_point<clock, duration>(d);
+      }
+    };
+    template <class Rep, class Period> struct serialize_value<std::chrono::duration<Rep, Period>> {
+      static inline constexpr std::string_view name() { return serialize_value<Rep>::name(); }
+      static inline nlohmann::json schema() { return serialize_value<Rep>::schema(); }
+      static inline constexpr void binary(auto& ss, const std::chrono::duration<Rep, Period>& value) {
+        Rep d = value.count();
+        serialize_value<Rep>::binary(ss, d);
+      }
+      static inline constexpr void unbinary(auto& svp, std::chrono::duration<Rep, Period>& value) {
+        Rep d;
+        serialize_value<Rep>::unbinary(svp, d);
+        value = std::chrono::duration<Rep, Period>(d);
+      }
+    };
     template <typename base_type> struct serialize_value_float {
       static inline constexpr void binary(auto& ss, const base_type& value) { ss(std::string_view(reinterpret_cast<const char*>(&value), sizeof(base_type))); }
       static inline constexpr void unbinary(auto& svp, base_type& value) { value = *reinterpret_cast<const base_type*>(svp.fixed(sizeof(base_type)).data()); }
@@ -101,6 +127,12 @@ namespace cserial {
       static inline constexpr void unbinary(auto& svp, std::string& value) { value = svp.string(); }
       static inline nlohmann::json json(const std::string& value) { return nlohmann::json(value); }
       static inline void unjson(nlohmann::json object, std::string& value) { value = object.get<std::string>(); }
+    };
+    template <> struct serialize_value<std::monostate> {
+      static inline constexpr std::string_view name() { return "null"sv; }
+      static inline nlohmann::json schema() { return nlohmann::json(name()); }
+      static inline constexpr void binary(auto& ss, const std::monostate& value) {}
+      static inline constexpr void unbinary(auto& svp, std::monostate& value) {}
     };
     template <typename subtype> struct serialize_value<std::vector<subtype>> {
       static inline constexpr std::string_view name() { return "array"sv; }
@@ -264,7 +296,10 @@ namespace cserial {
     /**
      * \brief Generate the schema for the given data type
      */
-    template <typename self_type> inline nlohmann::json schema() { return serialize_value_norm<self_type>::schema(); }
+    template <typename self_type> inline nlohmann::json schema() {
+      static_assert(is_defined<serial<self_type>>, "Missing serializer info");
+      return serialize_value_norm<self_type>::schema();
+    }
     /**
      * \brief Serialize a value into a std::string
      */
@@ -301,30 +336,21 @@ namespace cserial {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   namespace avro {
     struct schema_file {
-      std::array<char, 4> magic;
+      std::array<char, 4> magic{'O', 'b', 'j', 1};
       std::unordered_map<std::string, std::string> meta;
-      std::array<char, 16> sync;
-      long count;
-      long size;
+      std::array<char, 16> sync{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
+    };
+    struct block_file {
+      long count = 1;
+      std::string content;
+      std::array<char, 16> sync{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
     };
   } // namespace avro
   template <>
-  struct serial<avro::schema_file> : serializer<"ContainerObject", field<&avro::schema_file::magic, "magic">, field<&avro::schema_file::meta, "meta">,
-                                                field<&avro::schema_file::sync, "sync">, field<&avro::schema_file::count, "count">, field<&avro::schema_file::size, "size">> {};
-  namespace avro {
-    template <typename self_type> std::string serialize_object_container(const self_type& a) {
-      std::string file_data = serialize(a);
-      schema_file sf;
-      sf.magic[0] = 'O';
-      sf.magic[1] = 'b';
-      sf.magic[2] = 'j';
-      sf.magic[3] = 1;
-      sf.meta["avro.schema"] = schema<self_type>().dump();
-      sf.sync.fill('0');
-      sf.count = 1;
-      sf.size = file_data.size();
-      return avro::serialize(sf) + file_data + std::string(16, '0');
-    }
-  } // namespace avro
+  struct serial<avro::schema_file>
+      : serializer<"ContainerHeader", field<&avro::schema_file::magic, "magic">, field<&avro::schema_file::meta, "meta">, field<&avro::schema_file::sync, "sync">> {};
+  template <>
+  struct serial<avro::block_file>
+      : serializer<"ContainerObject", field<&avro::block_file::count, "count">, field<&avro::block_file::content, "content">, field<&avro::block_file::sync, "sync">> {};
 #endif
 } // namespace cserial
