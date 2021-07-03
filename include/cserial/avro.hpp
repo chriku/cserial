@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <optional>
 
 namespace cserial {
   namespace avro {

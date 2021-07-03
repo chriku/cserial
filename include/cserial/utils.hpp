@@ -89,7 +89,7 @@ namespace cserial {
     inline std::string_view fixed(const size_t len) {
       auto start = m_current_pos;
       m_current_pos += len;
-      return std::string_view(start, m_current_pos - start);
+      return std::string_view(std::to_address(start), static_cast<std::string_view::size_type>(m_current_pos - start));
     }
     /**
      * \brief Read a variable length string from the stream
