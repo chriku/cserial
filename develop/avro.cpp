@@ -1,6 +1,6 @@
-#include "avro.hpp"
-#include "avro_variable.hpp"
-#include "serialize.hpp"
+#include "cserial/avro.hpp"
+#include "cserial/avro_variable.hpp"
+#include "cserial/serialize.hpp"
 #include <iostream>
 
 using namespace std::literals;

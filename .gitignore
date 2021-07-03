@@ -30,7 +30,6 @@ nie.zip
 *.chrome
 version.inc
 nie.elf
-cserial
 *.avro
 test
 build

@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "avro.hpp"
-#include "avro_variable.hpp"
+#include "cserial/avro.hpp"
+#include "cserial/avro_variable.hpp"
 #include "doctest.h"
 #include <string>
 
