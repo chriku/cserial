@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 #include <optional>
+#include <chrono>
 
 namespace cserial {
   namespace avro {
