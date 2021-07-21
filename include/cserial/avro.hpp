@@ -17,7 +17,7 @@ namespace cserial {
   namespace avro {
     template <typename self_type> struct serialize_value;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    template <typename self_type> struct serialize_value_norm : serialize_value<std::remove_cv_t<std::remove_reference_t<self_type>>> {};
+    template <typename self_type> struct serialize_value_norm : serialize_value<std::remove_cvref_t<std::remove_reference_t<self_type>>> {};
     template <typename self_type_raw> struct serialize_value {
       using self_type = typename std::remove_cv_t<std::remove_reference_t<self_type_raw>>;
       static_assert(is_defined<serial<self_type>>, "Missing serializer info");
@@ -76,8 +76,10 @@ namespace cserial {
       static inline nlohmann::json json(const integer_type& value) { return nlohmann::json(value); }
       static inline void unjson(nlohmann::json object, integer_type& value) { value = object.get<integer_type>(); }
     };
-    template <> struct serialize_value<int64_t> : serialize_value_int<int64_t> {};
-    template <> struct serialize_value<uint64_t> : serialize_value_int<uint64_t> {};
+    template <> struct serialize_value<long long> : serialize_value_int<long long> {};
+    template <> struct serialize_value<unsigned long long> : serialize_value_int<unsigned long long> {};
+    template <> struct serialize_value<long> : serialize_value_int<long> {};
+    template <> struct serialize_value<unsigned long> : serialize_value_int<unsigned long> {};
     template <> struct serialize_value<int32_t> : serialize_value_int<int32_t> {};
     template <> struct serialize_value<uint32_t> : serialize_value_int<uint32_t> {};
     template <> struct serialize_value<int16_t> : serialize_value_int<int16_t> {};
@@ -291,12 +293,12 @@ namespace cserial {
     template <size_t len> struct serialize_value<std::array<char, len>> {
       static inline constexpr std::string_view name() { return numeric_string<len>::get(); }
       static inline nlohmann::json schema(std::unordered_set<std::string_view>) { return nlohmann::json{{"type", "fixed"}, {"size", len}, {"name", name()}}; }
-      static inline constexpr void binary(auto& ss, const std::array<char, len>& value) { ss(std::string_view(value.begin(), len)); }
+      static inline constexpr void binary(auto& ss, const std::array<char, len>& value) { ss(std::string_view(value.data(), len)); }
       static inline constexpr void unbinary(auto& svp, std::array<char, len>& value) {
         auto data = svp.fixed(len);
         std::copy(data.begin(), data.end(), value.begin());
       }
-      static inline nlohmann::json json(const std::array<char, len>& value) { return nlohmann::json(std::string_view(value.begin(), len)); }
+      static inline nlohmann::json json(const std::array<char, len>& value) { return nlohmann::json(std::string_view(value.data(), len)); }
       static inline void unjson(nlohmann::json object, std::array<char, len>& value) {
         std::string v = object.get<std::string>();
         std::copy(v.begin(), v.end(), value.begin());
