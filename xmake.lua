@@ -1,6 +1,7 @@
 set_policy("check.auto_ignore_flags", false)
 set_languages("cxx20")
 add_includedirs("include","json/include/")
+add_cxflags("-fconcepts-diagnostics-depth=3",{force=true})
 target("test")
   set_kind("binary")
   add_files("tests/**.cpp")

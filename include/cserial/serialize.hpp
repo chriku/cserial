@@ -1,9 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
+#include <optional>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 namespace cserial {
   template <typename T> struct member_pointer_class;
@@ -106,6 +109,31 @@ namespace cserial {
     static inline std::string_view name() { return name_t(); }
   };
   template <class T1, class T2> struct serial<std::pair<T1, T2>> : serializer<"pair", field<&std::pair<T1, T2>::first, "first">, field<&std::pair<T1, T2>::second, "second">> {};
+
+  template <typename clock, typename duration> struct serial<std::chrono::time_point<clock, duration>> : converter<std::chrono::time_point<clock, duration>, duration> {
+    static void convert(const std::chrono::time_point<clock, duration>& a, duration& b) { b = a.time_since_epoch(); }
+    static void unconvert(const duration& a, std::chrono::time_point<clock, duration>& b) { b = std::chrono::time_point<clock, duration>(a); }
+  };
+
+  template <typename Rep, typename Period> struct serial<std::chrono::duration<Rep, Period>> : converter<std::chrono::duration<Rep, Period>, Rep> {
+    static void convert(const std::chrono::duration<Rep, Period>& a, Rep& b) { b = a.count(); }
+    static void unconvert(const Rep& a, std::chrono::duration<Rep, Period>& b) { b = std::chrono::duration<Rep, Period>(a); }
+  };
+
+  template <typename subtype> struct serial<std::optional<subtype>> : converter<std::optional<subtype>, std::variant<std::monostate, subtype>> {
+    static void convert(const std::optional<subtype>& a, std::variant<std::monostate, subtype>& b) {
+      if (a)
+        b = *a;
+      else
+        b = std::monostate();
+    }
+    static void unconvert(const std::variant<std::monostate, subtype>& a, std::optional<subtype>& b) {
+      if (std::holds_alternative<subtype>)
+        b = std::get<subtype>(a);
+      else
+        b.reset();
+    }
+  };
 
   /**
    * \brief Default key for the default_value parameter.

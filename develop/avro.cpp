@@ -41,4 +41,5 @@ int main() {
     std::cout << std::dec << std::endl;
   }
   std::cout << cserial::avro::schema<file_content2>() << std::endl;
+  std::cout << cserial::avro::schema<std::chrono::steady_clock::time_point>() << std::endl;
 }
