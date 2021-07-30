@@ -6,32 +6,39 @@
 using namespace std::literals;
 
 struct file_content {
-  int32_t x;
-  //int32_t y;
-   std::unordered_map<std::string, int32_t> y;
+  bool x = true;
 };
 template <>
-struct cserial::serial<file_content> : serializer<"file_content",               //
-                                                  field<&file_content::x, "x">, //
-                                                  field<&file_content::y, "y">> {};
+struct cserial::serial<file_content> : serializer<"file_content", //
+                                                  field<&file_content::x, "x">> {};
+
 struct file_content2 {
-  std::unordered_map<std::string, int32_t> y;
+  bool x;
 };
-template <>
-struct cserial::serial<file_content2> : serializer<"file_content", //
-                                                   field<&file_content2::y, "y">> {};
+template <> struct cserial::serial<file_content2> : converter<file_content2, std::optional<long>> {
+  static void convert(const file_content2& a, std::optional<long>& b) {
+    if (a.x)
+      b = 5;
+  }
+  static void unconvert(const std::optional<long>& a, file_content2& b) { b.x = a.has_value(); }
+};
 
 int main() {
-  file_content a;
-  file_content2 b;
-  a.y.emplace("A", 4);
-  a.y.emplace("B", 5);
-  a.y.emplace("C", 6);
-  std::string t = cserial::avro::serialize(a);
-  for (auto c : t)
-    std::cout << std::setfill('0') << std::setw(2) << std::hex << ((uint8_t)c) + 0 << " ";
-  std::cout << std::dec << std::endl;
-  std::cout << cserial::avro::schema<file_content>() << std::endl;
-  cserial::avro_variable::build_deserializer<file_content2>(cserial::avro::schema<file_content>())(b, t);
-  std::cout << b.y.size() << std::endl;
+  {
+    file_content2 a;
+    a.x = true;
+    std::string t = cserial::avro::serialize(a);
+    for (auto c : t)
+      std::cout << std::setfill('0') << std::setw(2) << std::hex << ((uint8_t)c) + 0 << " ";
+    std::cout << std::dec << std::endl;
+  }
+  {
+    file_content2 a;
+    a.x = false;
+    std::string t = cserial::avro::serialize(a);
+    for (auto c : t)
+      std::cout << std::setfill('0') << std::setw(2) << std::hex << ((uint8_t)c) + 0 << " ";
+    std::cout << std::dec << std::endl;
+  }
+  std::cout << cserial::avro::schema<file_content2>() << std::endl;
 }

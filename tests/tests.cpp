@@ -14,7 +14,7 @@ TEST_CASE("avro double 0") {
   file_content a;
   file_content b;
   a.x = 0;
-  cserial::avro::deserialize(b, cserial::avro::serialize(a));
+  cserial::avro::deserialize_sv(b, cserial::avro::serialize(a));
   CHECK(b.x == doctest::Approx(a.x));
 }
 
@@ -22,7 +22,7 @@ TEST_CASE("avro double 1") {
   file_content a;
   file_content b;
   a.x = 1;
-  cserial::avro::deserialize(b, cserial::avro::serialize(a));
+  cserial::avro::deserialize_sv(b, cserial::avro::serialize(a));
   CHECK(b.x == doctest::Approx(a.x));
 }
 
@@ -30,7 +30,7 @@ TEST_CASE("avro double -1") {
   file_content a;
   file_content b;
   a.x = -1;
-  cserial::avro::deserialize(b, cserial::avro::serialize(a));
+  cserial::avro::deserialize_sv(b, cserial::avro::serialize(a));
   CHECK(b.x == doctest::Approx(a.x));
 }
 
@@ -38,6 +38,6 @@ TEST_CASE("avro double 0.0000001") {
   file_content a;
   file_content b;
   a.x = 0.0000001;
-  cserial::avro::deserialize(b, cserial::avro::serialize(a));
+  cserial::avro::deserialize_sv(b, cserial::avro::serialize(a));
   CHECK(b.x == doctest::Approx(a.x));
 }

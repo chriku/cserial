@@ -18,9 +18,7 @@ namespace cserial {
     template <typename self_type> struct serialize_value;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     template <typename self_type> struct serialize_value_norm : serialize_value<std::remove_cvref_t<std::remove_reference_t<self_type>>> {};
-    template <typename self_type_raw> struct serialize_value {
-      using self_type = typename std::remove_cv_t<std::remove_reference_t<self_type_raw>>;
-      static_assert(is_defined<serial<self_type>>, "Missing serializer info");
+    template <typename self_type> struct serialize_value_struct {
       static inline constexpr std::string_view name() { return serial<self_type>::name(); }
       static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
         if (stack.contains(name()))
@@ -54,6 +52,24 @@ namespace cserial {
         return ret;
       }
       static inline void unjson(nlohmann::json object, self_type& value) {}
+    };
+    template <typename self_type> struct serialize_value_convert {
+      using serial_type = typename serial<self_type>::serial_type;
+      static inline constexpr std::string_view name() { return serialize_value_norm<serial_type>::name(); }
+      static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) { return serialize_value_norm<serial_type>::schema(stack); }
+      static inline constexpr void binary(auto& ss, const self_type& value) {
+        serial_type v2;
+        serial<self_type>::convert(value, v2);
+        serialize_value_norm<serial_type>::binary(ss, v2);
+      }
+      static inline constexpr void unbinary(auto& svp, self_type& value) {
+        serial_type v2;
+        serialize_value_norm<serial_type>::unbinary(svp, v2);
+        serial<self_type>::unconvert(v2, value);
+      }
+    };
+    template <typename self_type>
+    struct serialize_value : std::conditional_t<std::is_base_of_v<available_converter, serial<self_type>>, serialize_value_convert<self_type>, serialize_value_struct<self_type>> {
     };
     template <> struct serialize_value<bool> {
       static inline constexpr std::string_view name() { return "boolean"sv; }
@@ -329,7 +345,7 @@ namespace cserial {
     /**
      * \brief Deserialize a std::string_view
      */
-    template <typename self_type> inline void deserialize_sv(self_type& value, const std::string_view& text) {
+    template <typename self_type> inline void deserialize_sv(self_type& value, std::string_view text) {
       string_view_parser p(text);
       serialize_value_norm<self_type>::unbinary(p, value);
     }

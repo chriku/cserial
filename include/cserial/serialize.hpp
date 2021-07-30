@@ -6,7 +6,6 @@
 #include <utility>
 
 namespace cserial {
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
   template <typename T> struct member_pointer_class;
   template <typename Class, typename Value> struct member_pointer_class<Value Class::*> { typedef Class type; };
   template <typename T> struct member_pointer_value;
@@ -21,15 +20,12 @@ namespace cserial {
         return std::string_view();
     }
   };
-#endif
   /**
    * \brief A parameter for a field
    */
   template <typename key_t, auto val_t> struct parameter {
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
     using key = key_t;
     constexpr static auto value = val_t;
-#endif
   };
   /**
    * \brief Describes the layout of a serializable struct
@@ -43,7 +39,6 @@ namespace cserial {
    * \tparam parameters_t list of 0..n parameters
    */
   template <auto member_pointer_t, string_literal name_t, typename... parameters_t> struct field {
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
     using value_type = typename member_pointer_value<decltype(member_pointer_t)>::type;
     constexpr static inline auto member_pointer() { return member_pointer_t; }
     constexpr static inline std::string_view name() { return name_t(); }
@@ -75,10 +70,8 @@ namespace cserial {
       }
       return false;
     }
-#endif
   };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
   template <typename self_type, typename executor_type, typename current_field, typename... other> struct field_iterator {
     static inline void execute(self_type* s, executor_type executor) {
       executor(s, static_cast<current_field*>(nullptr));
@@ -87,20 +80,30 @@ namespace cserial {
       }
     }
   };
-#endif
+
+  struct available_converter {};
+
+  /**
+   * \brief Default builder for simple structs
+   * \tparam name_t Name of the struct to be used in serialization
+   * \tparam args List of fields
+   */
+  template <typename base_type_t, typename serial_type_t> struct converter : available_converter {
+    using base_type = base_type_t;
+    using serial_type = serial_type_t;
+  };
+
   /**
    * \brief Default builder for simple structs
    * \tparam name_t Name of the struct to be used in serialization
    * \tparam args List of fields
    */
   template <string_literal name_t, typename... args> struct serializer {
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
     template <typename self_type, typename executor_type> static inline void iterate(self_type* s, executor_type executor) {
       if constexpr (sizeof...(args) > 0)
         field_iterator<self_type, executor_type, args...>::execute(s, executor);
     }
     static inline std::string_view name() { return name_t(); }
-#endif
   };
   template <class T1, class T2> struct serial<std::pair<T1, T2>> : serializer<"pair", field<&std::pair<T1, T2>::first, "first">, field<&std::pair<T1, T2>::second, "second">> {};
 
