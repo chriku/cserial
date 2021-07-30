@@ -9,23 +9,23 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+//#include <concepts>
 
 namespace cserial {
   namespace avro {
     template <typename self_type> struct serialize_value;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    template <typename self_type>
+    /*template <typename self_type>
     concept AvroStruct = requires(self_type val) {
       { serialize_value<self_type>::name() } -> std::convertible_to<std::string_view>;
       { serialize_value<self_type>::schema(std::unordered_set<std::string_view>()) } -> std::convertible_to<nlohmann::json>;
       { serialize_value<self_type>::binary(std::declval<std::function<void(std::string_view)>&>(), val) } -> std::convertible_to<void>;
       { serialize_value<self_type>::unbinary(std::declval<string_view_parser&>(), val) } -> std::convertible_to<void>;
       { serialize_value<self_type>::json(val) } -> std::convertible_to<nlohmann::json>;
-    };
+    };*/
     template <typename self_type>
-    requires AvroStruct<typename std::remove_cvref_t<std::remove_reference_t<self_type>>>
-    struct serialize_value_norm : serialize_value<std::remove_cvref_t<std::remove_reference_t<self_type>>> {
-    };
+    // requires AvroStruct<typename std::remove_cvref_t<std::remove_reference_t<self_type>>>
+    struct serialize_value_norm : serialize_value<std::remove_cvref_t<std::remove_reference_t<self_type>>> {};
     template <typename self_type> struct serialize_value_struct {
       static inline constexpr std::string_view name() { return serial<self_type>::name(); }
       static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
@@ -241,8 +241,9 @@ namespace cserial {
       template <size_t target_value, typename current_type, typename... other>
       static inline constexpr void unbinary_value(size_t index, auto& svp, std::variant<subtype...>& value) {
         if (index == target_value) {
-          value = std::variant<subtype...>(std::in_place_index<target_value>);
-          serialize_value_norm<current_type>::unbinary(svp, std::get<target_value>(value));
+          current_type t;
+          serialize_value_norm<current_type>::unbinary(svp, t);
+          value = std::variant<subtype...>(std::in_place_index<target_value>, t);
         }
         if constexpr (sizeof...(other) > 0) {
           unbinary_value<target_value + 1, other...>(index, svp, value);
