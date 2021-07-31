@@ -252,10 +252,13 @@ namespace cserial {
       }
       static inline constexpr void unbinary(auto& svp, std::variant<subtype...>& value) { unbinary_value<0, subtype...>(svp.zig_zag(), svp, value); }
       static inline nlohmann::json json(const std::variant<subtype...>& value) {
-        nlohmann::json retval("null");
+        nlohmann::json retval;
         std::visit(
             [&](auto&& arg) constexpr {
-              retval = nlohmann::json{{serialize_value_norm<decltype(arg)>::name(), serialize_value_norm<decltype(arg)>::json(arg)}};
+              if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_reference_t<decltype(arg)>>, std::monostate>)
+                retval = nlohmann::json();
+              else
+                retval = nlohmann::json{{serialize_value_norm<decltype(arg)>::name(), serialize_value_norm<decltype(arg)>::json(arg)}};
             },
             value);
         return retval;
