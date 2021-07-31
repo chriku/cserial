@@ -51,6 +51,7 @@ namespace cserial {
     template <> struct patch_value<float> : patch_value_simple<float> {};
     template <> struct patch_value<double> : patch_value_simple<double> {};
     template <> struct patch_value<bool> : patch_value_simple<bool> {};
+    template <> struct patch_value<std::string> : patch_value_simple<std::string> {};
     template <> struct patch_value<std::monostate> {
       static void apply(std::monostate& value, patch& p) {}
     };
@@ -66,6 +67,28 @@ namespace cserial {
         size_t name = std::get<size_t>(p.key.at(p.keypos));
         p.keypos++;
         apply_cond<0, types...>(value, p, name);
+      }
+    };
+    template <typename subtype> struct patch_value<std::unordered_map<std::string, subtype>> {
+      static void apply(std::unordered_map<std::string, subtype>& value, patch& p) {
+        std::string name = std::get<std::string>(p.key.at(p.keypos));
+        p.keypos++;
+        if ((p.keypos == p.key.size()) && (p.value.is_null())) {
+          value.erase(name);
+        } else
+          patch_value<subtype>::apply(value[name], p);
+      }
+    };
+    template <typename subtype> struct patch_value<std::vector<subtype>> {
+      static void apply(std::vector<subtype>& value, patch& p) {
+        size_t name = std::get<size_t>(p.key.at(p.keypos));
+        p.keypos++;
+        if ((p.keypos == p.key.size()) && (p.value.is_null())) {
+          value.resize(name);
+          return;
+        } else if (value.size() <= name)
+          value.resize(name + 1);
+        patch_value<subtype>::apply(value.at(name), p);
       }
     };
     std::vector<patch> ensure_split(patch in) {
@@ -88,11 +111,15 @@ namespace cserial {
       }
     }
     template <typename self_type> void apply(self_type& o, nlohmann::json object) {
-      patch root_patch;
-      root_patch.value = object;
-      auto p = ensure_split(root_patch);
-      for (auto& p : p)
-        patch_value<self_type>::apply(o, p);
+      if (object.is_object()) {
+        patch root_patch;
+        root_patch.value = object;
+        auto p = ensure_split(root_patch);
+        for (auto& p : p)
+          patch_value<self_type>::apply(o, p);
+      } else
+        for (const auto& so : object)
+          apply<self_type>(o, so);
     }
   } // namespace patch
 } // namespace cserial
