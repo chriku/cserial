@@ -134,6 +134,15 @@ namespace cserial {
         b.reset();
     }
   };
+  template <typename subtype> struct serial<std::shared_ptr<subtype>> : converter<std::shared_ptr<subtype>, subtype> {
+    static void convert(const std::shared_ptr<subtype> a, subtype& b) {
+      if (a)
+        b = *a;
+      else
+        throw std::runtime_error("Cannot serialize empty shared_ptr");
+    }
+    static void unconvert(const subtype& a, std::shared_ptr<subtype>& b) { b = std::make_shared<subtype>(a); }
+  };
 
   /**
    * \brief Default key for the default_value parameter.
