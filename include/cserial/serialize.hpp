@@ -128,7 +128,7 @@ namespace cserial {
         b = std::monostate();
     }
     static void unconvert(const std::variant<std::monostate, subtype>& a, std::optional<subtype>& b) {
-      if (std::holds_alternative<subtype>)
+      if (std::holds_alternative<subtype>(a))
         b = std::get<subtype>(a);
       else
         b.reset();
