@@ -1,4 +1,5 @@
 #pragma once
+#include <concepts>
 
 #include "serialize.hpp"
 #include "utils.hpp"
@@ -9,7 +10,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-//#include <concepts>
 
 namespace cserial {
   namespace avro {
@@ -26,7 +26,8 @@ namespace cserial {
     template <typename self_type>
     // requires AvroStruct<typename std::remove_cvref_t<std::remove_reference_t<self_type>>>
     struct serialize_value_norm : serialize_value<std::remove_cvref_t<std::remove_reference_t<self_type>>> {};
-    template <typename self_type> struct serialize_value_struct {
+    template <typename self_type>
+    requires(is_defined<serial<self_type>>) struct serialize_value_struct {
       static inline constexpr std::string_view name() { return serial<self_type>::name(); }
       static inline nlohmann::json schema(std::unordered_set<std::string_view> stack) {
         if (stack.contains(name()))
@@ -277,6 +278,7 @@ namespace cserial {
       }
     };
 #endif
+
     /**
      * \brief Generate the schema for the given data type
      */
