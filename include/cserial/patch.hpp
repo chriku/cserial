@@ -65,7 +65,7 @@ namespace cserial {
     template <typename subtype> struct patch_value<std::unordered_map<std::string, subtype>> {
       static void apply(std::unordered_map<std::string, subtype>& value, nlohmann::json p) {
         for (const auto& [key, val] : p.items()) {
-          if (value.is_null()) {
+          if (val.is_null()) {
             value.erase(key);
           } else {
             patch_value<subtype>::apply(value[key], val);
@@ -78,7 +78,7 @@ namespace cserial {
         for (const auto& [key, val] : p.items()) {
           size_t name;
           if (auto [p, ec] = std::from_chars(key.data(), key.data() + key.size(), name); (ec == std::errc()) && (p[0] == '\0')) {
-            if (value.is_null()) {
+            if (val.is_null()) {
               value.resize(name);
             } else {
               if (value.size() <= name)
