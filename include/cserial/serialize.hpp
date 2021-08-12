@@ -86,6 +86,7 @@ namespace cserial {
   };
 
   struct available_converter {};
+  struct available_index {};
 
   /**
    * \brief Default builder for simple structs
@@ -102,7 +103,7 @@ namespace cserial {
    * \tparam name_t Name of the struct to be used in serialization
    * \tparam args List of fields
    */
-  template <string_literal name_t, typename... args> struct serializer {
+  template <string_literal name_t, typename... args> struct serializer : available_index {
     template <typename self_type, typename executor_type> static inline void iterate(self_type* s, executor_type executor) {
       if constexpr (sizeof...(args) > 0)
         field_iterator<self_type, executor_type, args...>::execute(s, executor);
