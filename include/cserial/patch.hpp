@@ -55,7 +55,7 @@ namespace cserial {
     template <typename... types> struct patch_value<std::variant<types...>> {
       template <size_t i, typename current_type, typename... other> static void apply_cond(std::variant<types...>& value, nlohmann::json p) {
         if (p.contains(std::to_string(i))) {
-          value = std::variant<types...>(std::in_place_index<i>);
+          value = std::variant<types...>{std::in_place_index<i>};
           patch_value<current_type>::apply(std::get<i>(value), p[std::to_string(i)]);
         } else if constexpr (sizeof...(other) > 0)
           apply_cond<i + 1, other...>(value, p);
