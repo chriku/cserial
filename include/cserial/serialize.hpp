@@ -10,10 +10,11 @@
 #include <variant>
 
 namespace cserial {
-  template <typename T> struct member_pointer_class;
-  template <typename Class, typename Value> struct member_pointer_class<Value Class::*> { typedef Class type; };
-  template <typename T> struct member_pointer_value;
-  template <typename Class, typename Value> struct member_pointer_value<Value Class::*> { typedef Value type; };
+  template <typename T> struct member_pointer_info;
+  template <typename Class, typename Value> struct member_pointer_info<Value Class::*> {
+    typedef Class class_type;
+    typedef Value value_type;
+  };
   template <size_t N> struct string_literal {
     constexpr string_literal(const char (&str)[N]) { std::copy_n(str, N, value); }
     char value[N];
@@ -43,7 +44,7 @@ namespace cserial {
    * \tparam parameters_t list of 0..n parameters
    */
   template <auto member_pointer_t, string_literal name_t, typename... parameters_t> struct field {
-    using value_type = typename member_pointer_value<decltype(member_pointer_t)>::type;
+    using value_type = typename member_pointer_info<decltype(member_pointer_t)>::value_type;
     constexpr static inline auto member_pointer() { return member_pointer_t; }
     constexpr static inline std::string_view name() { return name_t(); }
     template <typename chosen_t, typename current_parameter, typename... other_parameters> constexpr static inline auto access_field(auto default_value) {
