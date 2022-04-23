@@ -30,13 +30,17 @@ namespace nlohmann {
 
     static void from_json(const json& j, self_type& value) {
       cserial::serial<self_type>::iterate(const_cast<self_type*>(&value), [&]<typename current_field>(self_type*, current_field*) {
-        if constexpr (!current_field::template has_parameter<cserial::simple_json::all>()) {
-          if (j.contains(std::string(current_field::name())))
-            value.*current_field::member_pointer() = j[std::string(current_field::name())].get<typename current_field::value_type>();
-          else
-            value.*current_field::member_pointer() = nlohmann::json().get<typename current_field::value_type>();
-        } else {
-          value.*current_field::member_pointer() = j.get<typename current_field::value_type>();
+        try {
+          if constexpr (!current_field::template has_parameter<cserial::simple_json::all>()) {
+            if (j.contains(std::string(current_field::name())))
+              value.*current_field::member_pointer() = j[std::string(current_field::name())].get<typename current_field::value_type>();
+            else
+              value.*current_field::member_pointer() = nlohmann::json().get<typename current_field::value_type>();
+          } else {
+            value.*current_field::member_pointer() = j.get<typename current_field::value_type>();
+          }
+        } catch (std::exception& e) {
+          throw std::runtime_error(std::string(fmt::format("error parsing field \"{}\": {}", current_field::name(), e.what())));
         }
       });
     }
